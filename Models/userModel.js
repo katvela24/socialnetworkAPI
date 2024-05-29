@@ -17,13 +17,19 @@ const userSchema = new Schema({
         match: [emailRegex, "Please provide a valid email"],
     },
     thoughts: [{
-        type: mongoose.Schema.Types.ObjectId
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Thought",
     }],
 
     friends: [{
-        type: mongoose.Schema.Types.ObjectId
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
     }]
 
+})
+//Returns the length of the friends array
+userSchema.virtual("friendCount").get(function(){
+    return this.friends.length
 })
 // Creating a model with the Schema and labeling it as "User"
 const userModel = mongoose.model("User",userSchema)
