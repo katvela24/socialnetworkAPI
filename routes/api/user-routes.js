@@ -59,9 +59,15 @@ router.delete('/:id', async (req, res) => {
 });
 
 // find one category by its `id` value
-router.get('/:id/friends/:friendId', async (req, res) => {
+router.post('/:id/friends/:friendId', async (req, res) => {
   try {
-   const user = await userModel.findById(req.params.id);
+    const user = await userModel.findByIdAndUpdate(req.params.id,{
+      $addToSet: {
+        friends: req.params.friendId
+      }
+    },{
+      new: true
+    });
     res.status(200).json(user);
   } catch (err) {
     console.log(err)

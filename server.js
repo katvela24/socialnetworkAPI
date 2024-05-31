@@ -2,7 +2,7 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const dotenv = require('dotenv');
-const router = require('./routes/api');
+const router = require('./routes');
 
 // Reading the dotenv file
 dotenv.config ();
@@ -15,6 +15,6 @@ app.use(express.json())
 app.use(router)
 
 // Connecting to the database
-mongoose.connect(`${process.env.MONGO_URL}`);
+mongoose.connect('mongodb://localhost:27017/socialnetwork', { useNewUrlParser: true });
 
 app.listen(port, () => {console.log ("application running")})

@@ -1,130 +1,100 @@
+const thoughtModel = require('../../Models/thoughtModel');
+
 const router = require('express').Router();
-const { Product, Category, Tag, ProductTag } = require('../../models');
 
-// The `/api/products` endpoint
-
-// get all products
 router.get('/', async (req, res) => {
+  // find all categories
   try {
-    const productData = await Product.findAll({
-      include: Category, Tag
-    });
-    res.status(200).json(productData);
+    const thoughts = await thoughtModel.find()
+  
+    res.status(200).json(thoughts);
   } catch (err) {
     console.log(err)
     res.status(500).json(err);
   }
 });
 
-// get one product
+// find one category by its `id` value
 router.get('/:id', async (req, res) => {
-  // find one category by its `id` value
-  const product_id = parseInt(req.params.id)
-   try {
-    const productData = await Product.findOne({
-      where: {id: product_id},
-      include: [{
-        model: Category
-      },{
-        model: Tag
-
-      }]
-    });
-    res.status(200).json(productData);
+  try {
+   const thought = await thoughtModel.findById(req.params.id);
+    res.status(200).json(thought);
   } catch (err) {
     console.log(err)
     res.status(500).json(err);
   }
 });
-// create new product
-router.post('/', (req, res) => {
-  /* req.body should look like this...
-    {
-      product_name: "Basketball",
-      price: 200.00,
-      stock: 3,
-      tagIds: [1, 2, 3, 4]
-    }
-  */
-  Product.create(req.body)
-    .then((product) => {
-      // if there's product tags, we need to create pairings to bulk create in the ProductTag model
-      if (req.body.tagIds.length) {
-        const productTagIdArr = req.body.tagIds.map((tag_id) => {
-          return {
-            product_id: product.id,
-            tag_id,
-          };
-        });
-        return ProductTag.bulkCreate(productTagIdArr);
-      }
-      // if no product tags, just respond
-      res.status(200).json(product);
-    })
-    .then((productTagIds) => res.status(200).json(productTagIds))
-    .catch((err) => {
-      console.log(err);
-      res.status(400).json(err);
-    });
+
+router.post('/', async (req, res) => {
+  try {
+    const thought = await thoughtModel.create(req.body);
+     res.status(200).json(thought);
+   } catch (err) {
+     console.log(err)
+     res.status(500).json(err);
+   }
 });
 
-// update product
-router.put('/:id', (req, res) => {
-  // update product data
-  Product.update(req.body, {
-    where: {
-      id: req.params.id,
-    },
-  })
-    .then((product) => {
-      if (req.body.tagIds && req.body.tagIds.length) {
-
-        ProductTag.findAll({
-          where: { product_id: req.params.id }
-        }).then((productTags) => {
-          // create filtered list of new tag_ids
-          const productTagIds = productTags.map(({ tag_id }) => tag_id);
-          const newProductTags = req.body.tagIds
-            .filter((tag_id) => !productTagIds.includes(tag_id))
-            .map((tag_id) => {
-              return {
-                product_id: req.params.id,
-                tag_id,
-              };
-            });
-
-          // figure out which ones to remove
-          const productTagsToRemove = productTags
-            .filter(({ tag_id }) => !req.body.tagIds.includes(tag_id))
-            .map(({ id }) => id);
-          // run both actions
-          return Promise.all([
-            ProductTag.destroy({ where: { id: productTagsToRemove } }),
-            ProductTag.bulkCreate(newProductTags),
-          ]);
-        });
-      }
-
-      return res.json(product);
-    })
-    .catch((err) => {
-      // console.log(err);
-      res.status(400).json(err);
+// update product data
+router.put('/:id', async (req, res) => {
+  try {
+    const thought = await thoughtModel.findByIdAndUpdate(req.params.id,req.body,{
+      new: true
     });
+     res.status(200).json(thought);
+   } catch (err) {
+     console.log(err)
+     res.status(500).json(err);
+   }
+})
+
+// Delete route 
+router.delete('/:id', async (req, res) => {
+  try {
+    const thought = await thoughtModel.findByIdAndDelete(req.params.id);
+     res.status(200).json(thought);
+   } catch (err) {
+     console.log(err)
+     res.status(500).json(err);
+   }
 });
 
+// find one category by its `id` value
+router.post('/:thoughtId/reactions', async (req, res) => {
+  try {
+    const thought = await thoughtModel.findByIdAndUpdate(req.params.thoughtId,{
+      $addToSet: {
+        reactions: req.body
+      }
+    },{
+      new: true
+    });
+    res.status(200).json(thought);
+  } catch (err) {
+    console.log(err)
+    res.status(500).json(err);
+  }
+});
 
-// Delete product by id
-router.delete('/:id', (req, res) => {
-  Product.destroy({
-    where: {
-      id: req.params.id,
-    },
-  })
-    .then((deletedProduct) => {
-      res.json(deletedProduct);
-    })
-    .catch((err) => res.json(err));
+// find thought by id and pulling(deleting) the reaction that matches the :reactionId
+router.delete('/:thoughtId/reactions/:reactionId', async (req, res) => {
+  try {
+    const thought = await thoughtModel.findByIdAndUpdate(req.params.thoughtId,{
+      $pull: {
+        reactions: {
+          reactionId: req.params.reactionId
+        }
+      }
+    },{
+      new: true
+    });
+    if(!thought)
+      res.status(500).json("thought does not exist")
+    res.status(200).json(thought);
+   } catch (err) {
+     console.log(err)
+     res.status(500).json(err);
+   }
 });
 
 module.exports = router;
